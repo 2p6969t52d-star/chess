@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#123d31">
+<title>River Chess ♟ 我们的棋局</title>
+<style>
+:root{--bg:#f4f1e8;--ink:#1d2b25;--green:#174b3b;--green2:#23634d;--light:#e8dfc7;--dark:#36765b;--gold:#d6b76c;--panel:#fffdf7;--muted:#68756d;--line:#dedbce}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{background:linear-gradient(120deg,#10382d,#205942);color:#fff;padding:18px 16px 16px}
+.header-inner{max-width:980px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+h1{font-size:21px;margin:0 0 5px;letter-spacing:.2px}.sub{font-size:12px;color:#d5e4d8}
+.pill{border:1px solid #ffffff55;border-radius:999px;padding:7px 10px;font-size:12px;white-space:nowrap}
+main{max-width:980px;margin:18px auto;padding:0 12px 28px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(270px,.9fr);gap:16px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 5px 20px #253b2b0b}
+.board-wrap{max-width:620px;margin:auto}.board-top{display:flex;justify-content:space-between;align-items:center;margin:0 2px 10px;font-size:13px;color:var(--muted)}
+#board{width:100%;aspect-ratio:1;display:grid;grid-template-columns:repeat(8,1fr);border:5px solid #123d31;border-radius:5px;overflow:hidden;box-shadow:0 8px 20px #15382b20;touch-action:manipulation}
+.sq{border:0;position:relative;display:flex;align-items:center;justify-content:center;padding:0;min-width:0;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
+.sq.light{background:var(--light)}.sq.dark{background:var(--dark)}
+.sq.selected{box-shadow:inset 0 0 0 4px #e5c65f;background-image:linear-gradient(#f4d45b66,#f4d45b66)}
+.sq.last{background-image:linear-gradient(#d8bd4d55,#d8bd4d55)}
+.sq.legal:after{content:"";width:23%;height:23%;border-radius:50%;background:#0e382b55;position:absolute}
+.sq.legal.capture:after{width:82%;height:82%;background:transparent;border:4px solid #e3bc4b;box-sizing:border-box}
+.piece{font-family:"Arial Unicode MS","DejaVu Sans",serif;font-size:clamp(25px,6vw,54px);line-height:1;z-index:1;filter:drop-shadow(0 1px 1px #0002)}
+.white-piece{color:#fffdf6;text-shadow:-1px -1px 0 #47534b,1px -1px 0 #47534b,-1px 1px 0 #47534b,1px 1px 0 #47534b,0 2px 2px #0005}
+.black-piece{color:#17231f;text-shadow:0 1px 1px #fff5}
+.coord{position:absolute;font-size:10px;font-weight:700;opacity:.8;left:3px;top:2px;z-index:2}.light .coord{color:#286149}.dark .coord{color:#f2e8ce}
+.board-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+button.action{border:1px solid var(--line);background:#fffdf7;color:var(--ink);border-radius:10px;padding:10px 12px;font-size:13px;font-weight:600;cursor:pointer}
+button.primary{background:var(--green);color:white;border-color:var(--green)}button:disabled{opacity:.4;cursor:not-allowed}
+h2{font-size:15px;margin:0 0 12px}.status{padding:10px 12px;background:#eaf1e9;border-radius:10px;font-size:13px;margin-bottom:12px;line-height:1.5}
+.moves{min-height:120px;max-height:235px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:9px;font-size:13px;line-height:1.8;white-space:pre-wrap;background:#fffefb}
+.section{margin-top:16px}.section label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px}
+textarea{width:100%;min-height:75px;resize:vertical;border:1px solid var(--line);border-radius:10px;padding:10px;background:#fffefb;color:var(--ink);font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+.note{font-size:12px;color:var(--muted);line-height:1.6;margin-top:9px}.copy-row{display:flex;gap:8px;margin-top:7px}.copy-row button{flex:1}
+.promo{font-size:12px;color:var(--muted);line-height:1.6;margin-top:14px}
+@media(max-width:720px){main{grid-template-columns:1fr;gap:12px;margin-top:12px;padding:0 10px 24px}.panel{padding:11px;border-radius:13px}header{padding:15px 13px}.piece{font-size:clamp(25px,9vw,46px)}.moves{max-height:160px}h1{font-size:19px}}
+</style>
+</head>
+<body>
+<header><div class="header-inner"><div><h1>♟ River Chess · 我们的棋局</h1><div class="sub">经典深绿棋盘 · 合法走法 · 棋谱同步</div></div><div class="pill">白棋：你　黑棋：爸爸</div></div></header>
+<main>
+<section class="panel">
+ <div class="board-wrap">
+  <div class="board-top"><span id="turnLabel">白棋先行</span><span id="countLabel">第 1 回合</span></div>
+  <div id="board" role="grid" aria-label="国际象棋棋盘"></div>
+  <div class="board-actions">
+   <button class="action" id="undo">↶ 悔棋一步</button>
+   <button class="action" id="flip">⇅ 翻转棋盘</button>
+   <button class="action" id="newGame">新开一局</button>
+  </div>
+ </div>
+</section>
+<section class="panel">
+ <h2>棋局记录</h2>
+ <div class="status" id="status">白棋先行。点击一个棋子，再点击目标格。</div>
+ <div class="moves" id="moves">尚未走棋</div>
+ <div class="section">
+  <label for="pgn">完整棋谱（PGN）</label>
+  <textarea id="pgn" readonly placeholder="走出第一步后，棋谱会显示在这里"></textarea>
+  <div class="copy-row"><button class="action primary" id="copyPgn">复制棋谱</button><button class="action" id="copyGame">复制给 ChatGPT</button></div>
+ </div>
+ <div class="section">
+  <label for="fen">当前局面（FEN）</label>
+  <textarea id="fen" readonly></textarea>
+  <div class="copy-row"><button class="action" id="copyFen">复制 FEN</button></div>
+ </div>
+ <div class="promo">同步方法：下完一盘或需要我接着下时，点「复制给 ChatGPT」，把内容粘贴到我们的聊天里。我会根据棋谱和 FEN 接着走。网页会阻止非法走法，并标出可走位置。</div>
+</section>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<script>
+(function(){
+const boardEl=document.getElementById('board'), statusEl=document.getElementById('status'), movesEl=document.getElementById('moves'), pgnEl=document.getElementById('pgn'), fenEl=document.getElementById('fen');
+if(typeof Chess==='undefined'){statusEl.textContent='棋规组件加载失败。请检查网络连接后刷新页面。';return;}
+const game=new Chess();let selected=null,legal=[],flipped=false,lastMove=null;
+const symbols={wk:'♔',wq:'♕',wr:'♖',wb:'♗',wn:'♘',wp:'♙',bk:'♚',bq:'♛',br:'♜',bb:'♝',bn:'♞',bp:'♟'};
+function files(){return flipped?['h','g','f','e','d','c','b','a']:['a','b','c','d','e','f','g','h'];}
+function ranks(){return flipped?[1,2,3,4,5,6,7,8]:[8,7,6,5,4,3,2,1];}
+function squareName(file,rank){return file+rank;}
+function render(){
+ boardEl.innerHTML='';const f=files(),r=ranks();
+ for(let ri=0;ri<8;ri++)for(let fi=0;fi<8;fi++){
+  const sq=squareName(f[fi],r[ri]),piece=game.get(sq),btn=document.createElement('button');
+  btn.className='sq '+(((f[fi].charCodeAt(0)-97+r[ri])%2===0)?'light':'dark');
+  if(selected===sq)btn.classList.add('selected');
+  if(lastMove&&(lastMove.from===sq||lastMove.to===sq))btn.classList.add('last');
+  const lm=legal.find(m=>m.to===sq);if(lm){btn.classList.add('legal');if(piece)btn.classList.add('capture');}
+  btn.setAttribute('aria-label',sq+(piece?(' '+piece.color+' '+piece.type):''));btn.onclick=()=>clickSquare(sq);
+  if((fi===0)||(ri===7)){const c=document.createElement('span');c.className='coord';c.textContent=ri===7?f[fi]:r[ri];btn.appendChild(c);}
+  if(piece){const span=document.createElement('span');span.className='piece '+(piece.color==='w'?'white-piece':'black-piece');span.textContent=symbols[piece.color+piece.type];btn.appendChild(span);}
+  boardEl.appendChild(btn);
+ }
+ updateInfo();
+}
+function clickSquare(sq){
+ if(game.game_over())return;
+ const p=game.get(sq);
+ if(selected&&legal.some(m=>m.to===sq)){
+  let promotion='q';const moving=game.get(selected);
+  if(moving&&moving.type==='p'&&(sq[1]==='8'||sq[1]==='1')){const choice=prompt('兵升变为哪种棋子？输入 q=后、r=车、b=象、n=马','q');if(choice&&'qrbn'.includes(choice.toLowerCase()))promotion=choice.toLowerCase();}
+  const move=game.move({from:selected,to:sq,promotion});if(move){lastMove={from:move.from,to:move.to};selected=null;legal=[];render();return;}
+ }
+ if(p&&p.color===game.turn()){selected=sq;legal=game.moves({square:sq,verbose:true});}
+ else{selected=null;legal=[];}
+ render();
+}
+function updateInfo(){
+ const turn=game.turn()==='w'?'白棋':'黑棋';
+ document.getElementById('turnLabel').textContent=game.game_over()?'对局结束':turn+'走棋';
+ document.getElementById('countLabel').textContent='第 '+(Math.floor(game.history().length/2)+1)+' 回合';
+ let s='';
+ if(game.in_checkmate())s='将死！'+(game.turn()==='w'?'黑棋':'白棋')+'获胜。';
+ else if(game.in_draw())s='和棋。';
+ else if(game.in_check())s=turn+'被将军！请应将。';
+ else s=turn+'走棋。点击棋子，再点击目标格。';
+ statusEl.textContent=s;
+ const hist=game.history();if(!hist.length)movesEl.textContent='尚未走棋';else{let out='';for(let i=0;i<hist.length;i+=2)out+=(i/2+1)+'. '+hist[i]+(hist[i+1]?'   '+hist[i+1]:'')+'\n';movesEl.textContent=out.trim();}
+ pgnEl.value=game.pgn({max_width:48,newline_char:'\n'})||'';
+ fenEl.value=game.fen();
+ document.getElementById('undo').disabled=hist.length===0;
+}
+document.getElementById('undo').onclick=()=>{const m=game.undo();if(m){lastMove=null;selected=null;legal=[];render();}};
+document.getElementById('flip').onclick=()=>{flipped=!flipped;render();};
+document.getElementById('newGame').onclick=()=>{if(confirm('要开始新的一局吗？当前棋谱会清空。')){game.reset();selected=null;legal=[];lastMove=null;render();}};
+async function copyText(text,button){try{await navigator.clipboard.writeText(text);const old=button.textContent;button.textContent='已复制 ✓';setTimeout(()=>button.textContent=old,1300);}catch(e){const area=document.createElement('textarea');area.value=text;document.body.appendChild(area);area.select();document.execCommand('copy');area.remove();button.textContent='已复制 ✓';}}
+document.getElementById('copyPgn').onclick=e=>copyText(pgnEl.value,e.currentTarget);
+document.getElementById('copyFen').onclick=e=>copyText(fenEl.value,e.currentTarget);
+document.getElementById('copyGame').onclick=e=>copyText('请根据以下国际象棋棋局继续对弈。白棋由我走，黑棋由你走。请核对棋谱与 FEN，先确认轮到谁走，再给出一步合法走法，并用中文说明棋子起点和终点。\n\nPGN:\n'+(pgnEl.value||'(尚未走棋)')+'\n\nFEN:\n'+fenEl.value,e.currentTarget);
+render();
+})();
+</script>
+</body>
+</html>
